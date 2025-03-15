@@ -1,0 +1,27 @@
+theme = "no-style-please"
+
+base_url = "https://danclark.io"
+title = "danclark.io"
+author = "Dan Clark"
+
+compile_sass = true
+generate_feeds = true
+build_search_index = false
+
+taxonomies = [{ name = "tags", feed = true }]
+
+[markdown]
+highlight_code = true
+highlight_theme = "material-dark"
+
+[extra]
+list_pages = true
+add_toc = true
+header_nav = [
+    { name = "home", url = "/" },
+    { name = "blog", url = "/blog" },
+    { name = "tags", url = "/tags" },
+    { name = "about", url = "/about" },
+    { name = "feed", url = "/atom.xml", new_tab = true },
+    { name = "github", url = "http://github.com/declark1", new_tab = true },
+]
