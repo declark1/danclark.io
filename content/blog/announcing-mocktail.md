@@ -37,9 +37,9 @@ async fn test_example() -> Result<(), Error> {
     // Create a mock set
     let mut mocks = MockSet::new();
 
-    // Build a mock that returns a "hello world!" response
-    // to POST requests to /hello with the text "world"
-    // in the body.
+    // Build a mock that returns "hello world!" to 
+    // POST requests to /hello with the text "world"
+    // in the body
     mocks.mock(|when, then| {
         when.post()
             .path("/hello")
@@ -50,8 +50,7 @@ async fn test_example() -> Result<(), Error> {
     // closure-builder API design :)
 
     // Create and start a mock server
-    let mut server = MockServer::new("example")
-        .with_mocks(mocks);
+    let mut server = MockServer::new("example").with_mocks(mocks);
     server.start().await?;
 
     // Create a client
@@ -63,6 +62,7 @@ async fn test_example() -> Result<(), Error> {
         .body("world")
         .send()
         .await?;
+    
     assert_eq!(response.status(), http::StatusCode::OK);
     let body = response.text().await?;
     assert_eq!(body, "hello world!");
@@ -72,6 +72,7 @@ async fn test_example() -> Result<(), Error> {
         .get(server.url("/nope"))
         .send()
         .await?;
+    
     assert_eq!(response.status(), http::StatusCode::NOT_FOUND);
 
     // Mocks can also be registered to the server directly
@@ -88,6 +89,7 @@ async fn test_example() -> Result<(), Error> {
         .get(server.url("/nope"))
         .send()
         .await?;
+    
     assert_eq!(response.status(), http::StatusCode::OK);
     let body = response.text().await?;
     assert_eq!(body, "yep!");
