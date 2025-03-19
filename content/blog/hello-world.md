@@ -5,7 +5,7 @@ date = 2025-03-15
 tags = ["rust"]
 +++
 
-Cool, this works :D
+I created this blog to write about Rust and other random stuff.
 
 {{ hr() }}
 
