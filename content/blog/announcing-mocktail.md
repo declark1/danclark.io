@@ -41,14 +41,17 @@ async fn test_example() -> Result<(), Error> {
     // to POST requests to /hello with the text "world"
     // in the body.
     mocks.mock(|when, then| {
-        when.post().path("/hello").text("world");
+        when.post()
+            .path("/hello")
+            .text("world");
         then.text("hello world!");
     });
     // NOTE: Shout out to httpmock for inspiring this 
     // closure-builder API design :)
 
     // Create and start a mock server
-    let mut server = MockServer::new("example").with_mocks(mocks);
+    let mut server = MockServer::new("example")
+        .with_mocks(mocks);
     server.start().await?;
 
     // Create a client
@@ -65,19 +68,26 @@ async fn test_example() -> Result<(), Error> {
     assert_eq!(body, "hello world!");
 
     // Send a request that doesn't match a mock
-    let response = client.get(server.url("/nope")).send().await?;
+    let response = client
+        .get(server.url("/nope"))
+        .send()
+        .await?;
     assert_eq!(response.status(), http::StatusCode::NOT_FOUND);
 
     // Mocks can also be registered to the server directly
     // Register a mock that will match the request above 
     // that returned 404
     server.mock(|when, then| {
-        when.get().path("/nope");
+        when.get()
+            .path("/nope");
         then.text("yep!");
     });
 
     // Send the request again, it should now match
-    let response = client.get(server.url("/nope")).send().await?;
+    let response = client
+        .get(server.url("/nope"))
+        .send()
+        .await?;
     assert_eq!(response.status(), http::StatusCode::OK);
     let body = response.text().await?;
     assert_eq!(body, "yep!");
@@ -89,7 +99,7 @@ async fn test_example() -> Result<(), Error> {
 }
 ```
 
-See the [book](https://ibm.github.io/mocktail/) for additional details (it's WIP), [docs](https://docs.rs/mocktail/latest/mocktail/), and [examples](/mocktail-tests/tests/examples) in the `mocktail-tests` crate for more.
+See the [book](https://ibm.github.io/mocktail/) for additional details (WIP), [docs](https://docs.rs/mocktail/latest/mocktail/), and [examples](https://github.com/IBM/mocktail/tree/main/mocktail-tests/tests/examples) in the `mocktail-tests` crate for more.
 
 #### This is an early stage alpha, subject to bugs and breaking changes.
 
