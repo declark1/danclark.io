@@ -31,26 +31,26 @@ A basic usage example:
 ```rust
 use anyhow::Error;
 use mocktail::prelude::*;
+use http::StatusCode;
 
 #[tokio::test]
 async fn test_example() -> Result<(), Error> {
     // Create a mock set
     let mut mocks = MockSet::new();
 
-    // Build a mock that returns "hello world!" to 
-    // POST requests to /hello with the text "world"
-    // in the body
+    // Build a mock
     mocks.mock(|when, then| {
         when.post()
             .path("/hello")
             .text("world");
         then.text("hello world!");
     });
-    // NOTE: Shout out to httpmock for inspiring this 
+    // Shout out to httpmock for inspiring this 
     // closure-builder API design :)
 
     // Create and start a mock server
-    let mut server = MockServer::new("example").with_mocks(mocks);
+    let mut server = MockServer::new("example")
+        .with_mocks(mocks);
     server.start().await?;
 
     // Create a client
@@ -63,7 +63,7 @@ async fn test_example() -> Result<(), Error> {
         .send()
         .await?;
     
-    assert_eq!(response.status(), http::StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::OK);
     let body = response.text().await?;
     assert_eq!(body, "hello world!");
 
@@ -73,10 +73,11 @@ async fn test_example() -> Result<(), Error> {
         .send()
         .await?;
     
-    assert_eq!(response.status(), http::StatusCode::NOT_FOUND);
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     // Mocks can also be registered to the server directly
-    // Register a mock that will match the request above 
+
+    // Build a mock that will match the request above 
     // that returned 404
     server.mock(|when, then| {
         when.get()
@@ -90,7 +91,7 @@ async fn test_example() -> Result<(), Error> {
         .send()
         .await?;
     
-    assert_eq!(response.status(), http::StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::OK);
     let body = response.text().await?;
     assert_eq!(body, "yep!");
 
