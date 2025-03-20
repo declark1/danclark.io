@@ -11,7 +11,7 @@ This is an announcement post for [mocktail](https://github.com/IBM/mocktail), a 
 
 **Simplicity to mock complexity.**
 
-At IBM Research, my team is building AI platform services in Rust. These services call out to various HTTP and gRPC services, a mix of unary and streaming methods. Our requirements are simple: to properly test our code, we need to mock these various backend services, otherwise we have to deploy real services just for testing. That's no fun.
+At IBM Research, my team is building an AI platform service in Rust. This service calls out to several HTTP and gRPC services, a mix of unary and streaming methods. Our requirements are simple: to properly test our code, we need to mock these services, otherwise we have to deploy real services just for testing. That's no fun.
 
 While there are some great mocking libraries in the Rust ecosystem such as [httpmock](https://github.com/alexliesenfeld/httpmock), [wiremock-rs](https://github.com/LukeMathWalker/wiremock-rs), and [stubr](https://github.com/beltram/stubr), none of them support gRPC or streaming. 
 
