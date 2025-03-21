@@ -38,17 +38,14 @@ async fn test_example() -> Result<(), Error> {
 
     // Build a mock
     mocks.mock(|when, then| {
-        when.post()
-            .path("/hello")
-            .text("world");
+        when.post().path("/hello").text("world");
         then.text("hello world!");
     });
     // Shout out to httpmock for inspiring this 
     // closure-builder API design :)
 
     // Create and start a mock server
-    let mut server = MockServer::new("example")
-        .with_mocks(mocks);
+    let mut server = MockServer::new("example").with_mocks(mocks);
     server.start().await?;
 
     // Create a client
@@ -78,8 +75,7 @@ async fn test_example() -> Result<(), Error> {
     // Build a mock that will match the request above 
     // that returned 404
     server.mock(|when, then| {
-        when.get()
-            .path("/nope");
+        when.get().path("/nope");
         then.text("yep!");
     });
 

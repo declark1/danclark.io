@@ -1,3 +1,39 @@
+@font-face {
+    font-family: 'zed-mono-regular';
+    src: url('fonts/zed-mono-regular.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'zed-mono-extended';
+    src: url('fonts/zed-mono-extended.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'zed-sans-regular';
+    src: url('fonts/zed-sans-regular.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'zed-sans-extended';
+    src: url('fonts/zed-sans-extended.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Roboto-Regular';
+    src: url('fonts/Roboto-Regular.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenSans-Regular';
+    src: url('fonts/OpenSans-Regular.ttf') format('truetype');
+    font-display: swap;
+}
+
 html,
 body {
     background: black;
@@ -9,9 +45,9 @@ html {
 
 body {
     color: white;
-    font-family: monospace;
-    font-size: 16px;
-    line-height: 1.4;
+    font-family: 'Roboto-Regular', sans-serif;
+    font-size: 1.1rem;
+    line-height: 1.7;
     margin: 0;
     min-height: 100%;
     overflow-wrap: break-word;
@@ -83,7 +119,9 @@ td {
 code {
     color: white;
     background: rgb(13, 13, 13);
-    font-size: 14px;
+    font-size: 1.0rem; //14px;
+    font-family: 'zed-mono-regular', monospace;
+    line-height: 1.4;
     overflow-x: auto;
 }
 
