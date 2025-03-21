@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>danclark.io - rust</title>
+    <link rel="self" type="application/atom+xml" href="https://danclark.io/tags/rust/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://danclark.io"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2025-03-19T00:00:00+00:00</updated>
+    <id>https://danclark.io/tags/rust/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Announcing mocktail: HTTP &amp; gRPC server mocking for Rust</title>
+        <published>2025-03-19T00:00:00+00:00</published>
+        <updated>2025-03-19T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Dan Clark
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://danclark.io/blog/announcing-mocktail/"/>
+        <id>https://danclark.io/blog/announcing-mocktail/</id>
+        
+        <content type="html" xml:base="https://danclark.io/blog/announcing-mocktail/">&lt;p&gt;This is an announcement post for &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;IBM&#x2F;mocktail&quot;&gt;mocktail&lt;&#x2F;a&gt;, a &lt;strong&gt;minimal&lt;&#x2F;strong&gt; crate for mocking HTTP and gRPC servers in Rust, with native support for streaming.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;motivation&quot;&gt;Motivation&lt;&#x2F;h2&gt;
+&lt;p&gt;At IBM Research, my team is building an AI platform service in Rust. This service calls out to several HTTP and gRPC services, a mix of unary and streaming methods. Our requirements are simple: to properly test our code, we need to mock these services, otherwise we have to deploy real services just for testing. That&#x27;s no fun.&lt;&#x2F;p&gt;
+&lt;p&gt;While there are some great mocking libraries in the Rust ecosystem such as &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;alexliesenfeld&#x2F;httpmock&quot;&gt;httpmock&lt;&#x2F;a&gt;, &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;LukeMathWalker&#x2F;wiremock-rs&quot;&gt;wiremock-rs&lt;&#x2F;a&gt;, and &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;beltram&#x2F;stubr&quot;&gt;stubr&lt;&#x2F;a&gt;, none of them support gRPC or streaming.&lt;&#x2F;p&gt;
+&lt;p&gt;I reviewed these crates to see if it would be feasible to contribute streaming and gRPC support, but it really did not seem like a good fit for their designs, so I decided to experiment with creating a new crate from the ground up.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Key requirements:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;A simple, ergonomic API to define mocks in Rust&lt;&#x2F;li&gt;
+&lt;li&gt;First-class support for streaming and gRPC&lt;&#x2F;li&gt;
+&lt;li&gt;A minimal set of &quot;matchers&quot; to match requests to mock responses by method, path, and body&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The result of this experiment is mocktail, which I am happy to share with the community, in case others have similar needs. I&#x27;ll share additional technical details and learnings from this in future posts.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;example&quot;&gt;Example&lt;&#x2F;h2&gt;
+&lt;p&gt;A basic usage example:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#212121;color:#eeffff;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#c792ea;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;anyhow&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;Error&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c792ea;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;mocktail&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;prelude&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::*;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c792ea;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;http&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;StatusCode&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;#[&lt;&#x2F;span&gt;&lt;span&gt;tokio::test&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;async &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;test_example&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;() -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcb6b;&quot;&gt;Result&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;lt;()&lt;&#x2F;span&gt;&lt;span&gt;, Error&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Create a mock set
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c792ea;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; mocks &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;MockSet&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;new&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Build a mock
+&lt;&#x2F;span&gt;&lt;span&gt;    mocks&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;mock&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f78c6c;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f78c6c;&quot;&gt;then&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;| {
+&lt;&#x2F;span&gt;&lt;span&gt;        when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;post&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;path&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;&#x2F;hello&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;world&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;        then&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;hello world!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;});
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Shout out to httpmock for inspiring this 
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; closure-builder API design :)
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Create and start a mock server
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c792ea;&quot;&gt;mut&lt;&#x2F;span&gt;&lt;span&gt; server &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;MockServer&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;new&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;example&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;with_mocks&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;mocks&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    server&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;start&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;().&lt;&#x2F;span&gt;&lt;span&gt;await&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;?;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Create a client
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; client &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;reqwest&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;Client&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;builder&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;()?;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Send a request that matches the mock created above
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; response &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; client
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;post&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;server&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;url&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;&#x2F;hello&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;))
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;body&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;world&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span&gt;await&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;?;
+&lt;&#x2F;span&gt;&lt;span&gt;    
+&lt;&#x2F;span&gt;&lt;span&gt;    assert_eq!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;response&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;status&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(), &lt;&#x2F;span&gt;&lt;span&gt;StatusCode&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;OK&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; body &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; response&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;().&lt;&#x2F;span&gt;&lt;span&gt;await&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;?;
+&lt;&#x2F;span&gt;&lt;span&gt;    assert_eq!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;body&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;, &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;hello world!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Send a request that doesn&amp;#39;t match a mock
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; response &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; client
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;get&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;server&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;url&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;&#x2F;nope&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;))
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span&gt;await&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;?;
+&lt;&#x2F;span&gt;&lt;span&gt;    
+&lt;&#x2F;span&gt;&lt;span&gt;    assert_eq!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;response&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;status&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(), &lt;&#x2F;span&gt;&lt;span&gt;StatusCode&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;NOT_FOUND&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Mocks can also be registered to the server directly
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Build a mock that will match the request above 
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; that returned 404
+&lt;&#x2F;span&gt;&lt;span&gt;    server&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;mock&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f78c6c;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f78c6c;&quot;&gt;then&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;| {
+&lt;&#x2F;span&gt;&lt;span&gt;        when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;get&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;path&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;&#x2F;nope&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;        then&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;yep!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;});
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Send the request again, it should now match
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; response &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; client
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;get&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;server&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;url&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;&#x2F;nope&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;))
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;send&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;()
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span&gt;await&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;?;
+&lt;&#x2F;span&gt;&lt;span&gt;    
+&lt;&#x2F;span&gt;&lt;span&gt;    assert_eq!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;response&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;status&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(), &lt;&#x2F;span&gt;&lt;span&gt;StatusCode&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;::&lt;&#x2F;span&gt;&lt;span&gt;OK&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; body &lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;=&lt;&#x2F;span&gt;&lt;span&gt; response&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;text&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;().&lt;&#x2F;span&gt;&lt;span&gt;await&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;?;
+&lt;&#x2F;span&gt;&lt;span&gt;    assert_eq!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&lt;&#x2F;span&gt;&lt;span&gt;body&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;, &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;yep!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#4a4a4a;&quot;&gt;&#x2F;&#x2F; Mocks can be cleared from the server, enabling server reuse
+&lt;&#x2F;span&gt;&lt;span&gt;    server&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span&gt;mocks&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;clear&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcb6b;&quot;&gt;Ok&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(())
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;See the &lt;a href=&quot;https:&#x2F;&#x2F;ibm.github.io&#x2F;mocktail&#x2F;&quot;&gt;book&lt;&#x2F;a&gt; for additional details (WIP), &lt;a href=&quot;https:&#x2F;&#x2F;docs.rs&#x2F;mocktail&#x2F;latest&#x2F;mocktail&#x2F;&quot;&gt;docs&lt;&#x2F;a&gt;, and &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;IBM&#x2F;mocktail&#x2F;tree&#x2F;main&#x2F;mocktail-tests&#x2F;tests&#x2F;examples&quot;&gt;examples&lt;&#x2F;a&gt; in the &lt;code&gt;mocktail-tests&lt;&#x2F;code&gt; crate for more.&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;this-is-an-early-stage-alpha-subject-to-bugs-and-breaking-changes&quot;&gt;This is an early stage alpha, subject to bugs and breaking changes.&lt;&#x2F;h4&gt;
+&lt;h2 id=&quot;next-steps&quot;&gt;Next Steps&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Add TLS support&lt;&#x2F;li&gt;
+&lt;li&gt;Add additional matchers&lt;&#x2F;li&gt;
+&lt;li&gt;Keepin it minimal, no bloat or advanced features planned&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Hello World</title>
+        <published>2025-03-15T00:00:00+00:00</published>
+        <updated>2025-03-15T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Dan Clark
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://danclark.io/blog/hello-world/"/>
+        <id>https://danclark.io/blog/hello-world/</id>
+        
+        <content type="html" xml:base="https://danclark.io/blog/hello-world/">&lt;p&gt;I created this blog to write about Rust and other random stuff.&lt;&#x2F;p&gt;
+&lt;hr data-content=&quot;&quot; \&gt;&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#212121;color:#eeffff;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#c792ea;&quot;&gt;pub &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#c792ea;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#82aaff;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    println!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c3e88d;&quot;&gt;hello world!&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#89ddff;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+</content>
+        
+    </entry>
+</feed>

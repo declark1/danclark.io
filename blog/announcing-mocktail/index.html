@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+        <meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
+        <meta content="width=device-width, initial-scale=1" name="viewport"/>
+
+        
+        
+        
+
+        
+
+        
+
+        
+
+        
+        
+        
+
+        <title>Announcing mocktail: HTTP &amp; gRPC server mocking for Rust</title>
+        
+        <meta name="title" content="Announcing mocktail: HTTP &amp; gRPC server mocking for Rust">
+        
+        
+        <meta name="generator" content="Zola v0.16.1">
+
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://danclark.io/blog/announcing-mocktail/">
+        <meta property="og:site_name" content="danclark.io">
+        <meta property="og:title" content="Announcing mocktail: HTTP &amp; gRPC server mocking for Rust">
+        
+        
+
+        
+        
+        <meta property="twitter:card" content="summary_large_image">
+        <meta property="twitter:url" content="https://danclark.io/blog/announcing-mocktail/">
+        <meta property="twitter:title" content="Announcing mocktail: HTTP &amp; gRPC server mocking for Rust">
+        
+        
+        
+        
+        <link rel="canonical" href="https://danclark.io/blog/announcing-mocktail/">
+        
+        <script type="application/ld+json">
+            {
+                
+                "url":"https://danclark.io/blog/announcing-mocktail/",
+                "@type":"WebSite",
+                "headline":"Announcing mocktail: HTTP & gRPC server mocking for Rust",
+                "name":"Announcing mocktail: HTTP & gRPC server mocking for Rust",
+                
+                "@context":"https://schema.org"
+            }
+        </script>
+        
+        
+        
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="https://danclark.io/atom.xml">
+        
+        
+        
+        <link rel="stylesheet" href="https://danclark.io/style.css"/>
+        
+    </head>
+    <body theme="auto">
+        <div class="w">
+            <header>
+                
+                <nav>
+                    
+                    <a href="/" >home</a>
+                    
+                    <a href="/blog" >blog</a>
+                    
+                    <a href="/tags" >tags</a>
+                    
+                    <a href="/about" >about</a>
+                    
+                    <a href="/atom.xml" target="_blank" rel="noreferrer noopener">feed</a>
+                    
+                    <a href="http://github.com/declark1" target="_blank" rel="noreferrer noopener">github</a>
+                    
+                </nav>
+                
+                
+<p><a href="..">..</a>/announcing-mocktail</p>
+<p class="post-meta"><time datetime="2025-03-19">2025-03-19</time></p>
+<h1>Announcing mocktail: HTTP &amp; gRPC server mocking for Rust</h1>
+
+            </header>
+            <main class="page-content" aria-label="Content">
+                
+
+
+
+<p>This is an announcement post for <a href="https://github.com/IBM/mocktail">mocktail</a>, a <strong>minimal</strong> crate for mocking HTTP and gRPC servers in Rust, with native support for streaming.</p>
+<h2 id="motivation">Motivation</h2>
+<p>At IBM Research, my team is building an AI platform service in Rust. This service calls out to several HTTP and gRPC services, a mix of unary and streaming methods. Our requirements are simple: to properly test our code, we need to mock these services, otherwise we have to deploy real services just for testing. That's no fun.</p>
+<p>While there are some great mocking libraries in the Rust ecosystem such as <a href="https://github.com/alexliesenfeld/httpmock">httpmock</a>, <a href="https://github.com/LukeMathWalker/wiremock-rs">wiremock-rs</a>, and <a href="https://github.com/beltram/stubr">stubr</a>, none of them support gRPC or streaming.</p>
+<p>I reviewed these crates to see if it would be feasible to contribute streaming and gRPC support, but it really did not seem like a good fit for their designs, so I decided to experiment with creating a new crate from the ground up.</p>
+<p><strong>Key requirements:</strong></p>
+<ul>
+<li>A simple, ergonomic API to define mocks in Rust</li>
+<li>First-class support for streaming and gRPC</li>
+<li>A minimal set of "matchers" to match requests to mock responses by method, path, and body</li>
+</ul>
+<p>The result of this experiment is mocktail, which I am happy to share with the community, in case others have similar needs. I'll share additional technical details and learnings from this in future posts.</p>
+<h2 id="example">Example</h2>
+<p>A basic usage example:</p>
+<pre data-lang="rust" style="background-color:#212121;color:#eeffff;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#c792ea;">use </span><span>anyhow</span><span style="color:#89ddff;">::</span><span>Error</span><span style="color:#89ddff;">;
+</span><span style="color:#c792ea;">use </span><span>mocktail</span><span style="color:#89ddff;">::</span><span>prelude</span><span style="color:#89ddff;">::*;
+</span><span style="color:#c792ea;">use </span><span>http</span><span style="color:#89ddff;">::</span><span>StatusCode</span><span style="color:#89ddff;">;
+</span><span>
+</span><span style="color:#89ddff;">#[</span><span>tokio::test</span><span style="color:#89ddff;">]
+</span><span>async </span><span style="font-style:italic;color:#c792ea;">fn </span><span style="color:#82aaff;">test_example</span><span style="color:#89ddff;">() -&gt; </span><span style="color:#ffcb6b;">Result</span><span style="color:#89ddff;">&lt;()</span><span>, Error</span><span style="color:#89ddff;">&gt; {
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Create a mock set
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let </span><span style="color:#c792ea;">mut</span><span> mocks </span><span style="color:#89ddff;">= </span><span>MockSet</span><span style="color:#89ddff;">::</span><span>new</span><span style="color:#89ddff;">();
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Build a mock
+</span><span>    mocks</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">mock</span><span style="color:#89ddff;">(|</span><span style="color:#f78c6c;">when</span><span style="color:#89ddff;">, </span><span style="color:#f78c6c;">then</span><span style="color:#89ddff;">| {
+</span><span>        when</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">post</span><span style="color:#89ddff;">().</span><span style="color:#82aaff;">path</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">/hello</span><span style="color:#89ddff;">&quot;).</span><span style="color:#82aaff;">text</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">world</span><span style="color:#89ddff;">&quot;);
+</span><span>        then</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">text</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">hello world!</span><span style="color:#89ddff;">&quot;);
+</span><span>    </span><span style="color:#89ddff;">});
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Shout out to httpmock for inspiring this 
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// closure-builder API design :)
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Create and start a mock server
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let </span><span style="color:#c792ea;">mut</span><span> server </span><span style="color:#89ddff;">= </span><span>MockServer</span><span style="color:#89ddff;">::</span><span>new</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">example</span><span style="color:#89ddff;">&quot;).</span><span style="color:#82aaff;">with_mocks</span><span style="color:#89ddff;">(</span><span>mocks</span><span style="color:#89ddff;">);
+</span><span>    server</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">start</span><span style="color:#89ddff;">().</span><span>await</span><span style="color:#89ddff;">?;
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Create a client
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let</span><span> client </span><span style="color:#89ddff;">= </span><span>reqwest</span><span style="color:#89ddff;">::</span><span>Client</span><span style="color:#89ddff;">::</span><span>builder</span><span style="color:#89ddff;">().</span><span style="color:#82aaff;">build</span><span style="color:#89ddff;">()?;
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Send a request that matches the mock created above
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let</span><span> response </span><span style="color:#89ddff;">=</span><span> client
+</span><span>        </span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">post</span><span style="color:#89ddff;">(</span><span>server</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">url</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">/hello</span><span style="color:#89ddff;">&quot;))
+</span><span>        </span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">body</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">world</span><span style="color:#89ddff;">&quot;)
+</span><span>        </span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">send</span><span style="color:#89ddff;">()
+</span><span>        </span><span style="color:#89ddff;">.</span><span>await</span><span style="color:#89ddff;">?;
+</span><span>    
+</span><span>    assert_eq!</span><span style="color:#89ddff;">(</span><span>response</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">status</span><span style="color:#89ddff;">(), </span><span>StatusCode</span><span style="color:#89ddff;">::</span><span>OK</span><span style="color:#89ddff;">);
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let</span><span> body </span><span style="color:#89ddff;">=</span><span> response</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">text</span><span style="color:#89ddff;">().</span><span>await</span><span style="color:#89ddff;">?;
+</span><span>    assert_eq!</span><span style="color:#89ddff;">(</span><span>body</span><span style="color:#89ddff;">, &quot;</span><span style="color:#c3e88d;">hello world!</span><span style="color:#89ddff;">&quot;);
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Send a request that doesn&#39;t match a mock
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let</span><span> response </span><span style="color:#89ddff;">=</span><span> client
+</span><span>        </span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">get</span><span style="color:#89ddff;">(</span><span>server</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">url</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">/nope</span><span style="color:#89ddff;">&quot;))
+</span><span>        </span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">send</span><span style="color:#89ddff;">()
+</span><span>        </span><span style="color:#89ddff;">.</span><span>await</span><span style="color:#89ddff;">?;
+</span><span>    
+</span><span>    assert_eq!</span><span style="color:#89ddff;">(</span><span>response</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">status</span><span style="color:#89ddff;">(), </span><span>StatusCode</span><span style="color:#89ddff;">::</span><span>NOT_FOUND</span><span style="color:#89ddff;">);
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Mocks can also be registered to the server directly
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Build a mock that will match the request above 
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// that returned 404
+</span><span>    server</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">mock</span><span style="color:#89ddff;">(|</span><span style="color:#f78c6c;">when</span><span style="color:#89ddff;">, </span><span style="color:#f78c6c;">then</span><span style="color:#89ddff;">| {
+</span><span>        when</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">get</span><span style="color:#89ddff;">().</span><span style="color:#82aaff;">path</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">/nope</span><span style="color:#89ddff;">&quot;);
+</span><span>        then</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">text</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">yep!</span><span style="color:#89ddff;">&quot;);
+</span><span>    </span><span style="color:#89ddff;">});
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Send the request again, it should now match
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let</span><span> response </span><span style="color:#89ddff;">=</span><span> client
+</span><span>        </span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">get</span><span style="color:#89ddff;">(</span><span>server</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">url</span><span style="color:#89ddff;">(&quot;</span><span style="color:#c3e88d;">/nope</span><span style="color:#89ddff;">&quot;))
+</span><span>        </span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">send</span><span style="color:#89ddff;">()
+</span><span>        </span><span style="color:#89ddff;">.</span><span>await</span><span style="color:#89ddff;">?;
+</span><span>    
+</span><span>    assert_eq!</span><span style="color:#89ddff;">(</span><span>response</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">status</span><span style="color:#89ddff;">(), </span><span>StatusCode</span><span style="color:#89ddff;">::</span><span>OK</span><span style="color:#89ddff;">);
+</span><span>    </span><span style="font-style:italic;color:#c792ea;">let</span><span> body </span><span style="color:#89ddff;">=</span><span> response</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">text</span><span style="color:#89ddff;">().</span><span>await</span><span style="color:#89ddff;">?;
+</span><span>    assert_eq!</span><span style="color:#89ddff;">(</span><span>body</span><span style="color:#89ddff;">, &quot;</span><span style="color:#c3e88d;">yep!</span><span style="color:#89ddff;">&quot;);
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#4a4a4a;">// Mocks can be cleared from the server, enabling server reuse
+</span><span>    server</span><span style="color:#89ddff;">.</span><span>mocks</span><span style="color:#89ddff;">.</span><span style="color:#82aaff;">clear</span><span style="color:#89ddff;">();
+</span><span>
+</span><span>    </span><span style="color:#ffcb6b;">Ok</span><span style="color:#89ddff;">(())
+</span><span style="color:#89ddff;">}
+</span></code></pre>
+<p>See the <a href="https://ibm.github.io/mocktail/">book</a> for additional details (WIP), <a href="https://docs.rs/mocktail/latest/mocktail/">docs</a>, and <a href="https://github.com/IBM/mocktail/tree/main/mocktail-tests/tests/examples">examples</a> in the <code>mocktail-tests</code> crate for more.</p>
+<h4 id="this-is-an-early-stage-alpha-subject-to-bugs-and-breaking-changes">This is an early stage alpha, subject to bugs and breaking changes.</h4>
+<h2 id="next-steps">Next Steps</h2>
+<ul>
+<li>Add TLS support</li>
+<li>Add additional matchers</li>
+<li>Keepin it minimal, no bloat or advanced features planned</li>
+</ul>
+
+
+            </main>
+            <footer>
+                
+<p class="taxonomies">
+
+
+<a href="/tags/rust">#rust</a>
+
+
+
+
+</p>
+
+                
+            </footer>
+        </div>
+    </body>
+</html>
+        
